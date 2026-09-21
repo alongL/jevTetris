@@ -6,10 +6,14 @@
 
 ---
 
-## 📸 界面预览
+## 📸 界面预览与实机演示 (Live Demo)
 
-![Tetris AI Preview](tetris_demo.gif)
+![Tetris AI Animated Preview](tetris_demo.gif)
 
+> 📹 **高清完整视频 (MP4)**：项目已内置导出标准的 H.264 视频文件，点击可直接在线观看或下载：
+> * 🔗 **[点击播放/下载演示视频: tetris_demo.mp4](tetris_demo.mp4)**
+> 
+> <video src="tetris_demo.mp4" controls="controls" width="100%"></video>
 
 * **街机级 Web 界面**：顶部生成方块（Row 0），自适应对齐角度，底部半透明幽灵预瞄（Ghost），平滑匀速下落触底。
 * **实时候选决策分布条**：动态展示 TypeSafe System One 对各个落点候选（列号、旋转、空洞数、消除行数）的概率置信度。
@@ -24,11 +28,15 @@
 ├── tetris_client.py      # TypeSafe 客户端工厂（安全从环境读取 API Key）
 ├── tetris_web.py         # Web 服务端与 HTML5 Canvas 赛博朋克图形前端
 ├── tetris_terminal.py    # 终端 ANSI 彩色字符画对弈脚本
+├── record_demo_video.py  # 自动化高清晰度视频/GIF 录制生成脚本
+├── tetris_demo.mp4       # 标准 H.264 MP4 演示视频
+├── tetris_demo.gif       # 高清动态预览动图
 ├── openjev_sdk.py        # 本地 OpenJEV 兼容适配层
 ├── requirements.txt      # Python 依赖清单
 ├── .env.example          # 环境变量配置模板（不含敏感密钥）
 └── README.md             # 本说明文档
 ```
+
 
 
 ---
