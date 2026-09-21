@@ -10,10 +10,7 @@
 
 ![Tetris AI Animated Preview](tetris_demo.gif)
 
-> 📹 **高清完整视频 (MP4)**：项目已内置导出标准的 H.264 视频文件，点击可直接在线观看或下载：
-> * 🔗 **[点击播放/下载演示视频: tetris_demo.mp4](tetris_demo.mp4)**
-> 
-> <video src="tetris_demo.mp4" controls="controls" width="100%"></video>
+
 
 * **街机级 Web 界面**：顶部生成方块（Row 0），自适应对齐角度，底部半透明幽灵预瞄（Ghost），平滑匀速下落触底。
 * **实时候选决策分布条**：动态展示 TypeSafe System One 对各个落点候选（列号、旋转、空洞数、消除行数）的概率置信度。
@@ -41,28 +38,43 @@
 
 ---
 
-## ⚙️ 核心技术原理
+## ⚙️ 核心技术原理与超强生存架构 (Ultra-Survival Architecture)
 
-1. **落点候选生成 (Candidate Move Generator)**：
-   - 遍历当前方块（I, J, L, O, S, T, Z）的所有合法旋转与平移位置。
-   - 快速仿真着陆状态，提取核心战略特征：消除行数 (`lines_cleared`)、不可达空洞 (`holes`)、表面凹凸度 (`bumpiness`)、最大堆叠高度 (`max_height`)。
-   - 筛选出最具代表性的 3~4 个策略候选，转化为结构化自然语言描述。
+1. **工业级 Pierre Dellacherie 评估体系**：
+   - 传统简单启发式仅看空洞和高度，易在连续恶劣方块下产生破窗雪球效应。
+   - 本系统全面引入经典 **Pierre Dellacherie** 机构级评估算子：
+     - **水平/垂直光滑度 (`row_transitions`, `col_transitions`)**：彻底消灭孤立悬空与尖刺突起。
+     - **深坑惩罚 (`well_sums`)**：杜绝形成非 I 块无法填充的狭窄深坑。
+     - **着陆高度抑制 (`landing_height`)**：最大化压低重心，严惩高位悬空。
+     - **碎片侵蚀奖励 (`eroded_piece_cells`)**：优先用刚落下的方块自身直接消行。
 
-2. **TypeSafe System One 概率决策 (`Choice` API)**：
-   - 将当前局面与候选描述输入 TypeSafe：
+2. **多看一步：下一块前瞻联合推演 (2-Ply Lookahead)**：
+   - 支持传入右上角的 **Next Piece（下一块预告）**。
+   - 在评估当前块所有合法落点后，联合推演下一块在该局面下的最优得分（`joint_score = current_score + 0.6 * future_score`）。
+   - 彻底避免出现“这一块放得很爽，却给下一块留下死局”的短视灾难。
+
+3. **动态危机状态机 (Emergency Survival Mode)**：
+   - **安全区（高度 < 11）**：追求极致平整与 0 空洞，稳健累积消除。
+   - **危急区（高度 $\ge$ 11）**：自动切换至 **`🚨 [EMERGENCY CLEARANCE]` 应急求生模式**！
+     - 消除行数奖励提升至最高优先级，不惜一切代价砸低塔高。
+     - 空洞惩罚呈指数级加剧（$\text{holes}^{1.6} \times 14$），防止破窗效应。
+     - Prompt 动态注入求生指令，引导 JEV 紧急避险。
+
+4. **TypeSafe System One 概率决策 (`Choice` API)**：
+   - 将当前局面、Next 预告与候选描述输入 TypeSafe：
      ```python
      resp = client.system_one(
-         state="Tetris Placement Decision:\nCurrent Falling Piece: T-tetromino...",
+         state="Tetris Strategic Decision [STRATEGIC: Maintain 0 holes, flat surface]:\nCurrent Falling Piece: T-tetromino | Next Preview: L...",
          questions={
              "best_move": Choice(
-                 instructions="Which candidate placement is the best strategic move to clear lines, avoid creating holes, and keep the board height low?",
+                 instructions="Which candidate placement is the best strategic move to survive, clear lines, avoid creating holes, and keep height low?",
                  criteria={
-                     "Move_A": "Col 0 (rot 0): Clears 0 lines, creates 0 holes (clean), keeps max height at 2, bumpiness 3.",
-                     "Move_B": "Col 7 (rot 0): Clears 0 lines, creates 0 holes (clean), keeps max height at 2, bumpiness 3.",
-                     "Move_C": "Col 0 (rot 1): Clears 0 lines, creates 1 trapped holes, keeps max height at 3, bumpiness 3.",
-                     "Move_D": "Col 6 (rot 2): Clears 0 lines, creates 2 trapped holes, keeps max height at 2, bumpiness 4."
+                     "Move_A": "Col 0 (rot 0): Clears 0 lines, 0 holes (clean surface), height 2, score 12.5.",
+                     "Move_B": "Col 7 (rot 0): Clears 0 lines, 0 holes (clean surface), height 2, score 12.5.",
+                     "Move_C": "Col 0 (rot 1): Clears 0 lines, 1 trapped holes, height 3, score -4.2.",
+                     "Move_D": "Col 6 (rot 2): Clears 0 lines, 2 trapped holes, height 2, score -18.6."
                  }
-             )
+             }
          },
          model="jev-latest"
      )

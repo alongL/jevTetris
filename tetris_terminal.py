@@ -76,16 +76,19 @@ def render_board(board: List[List[int]], current_piece: str, chosen_move: Dict[s
     return "\n".join(lines)
 
 
-def get_ai_decision(board: List[List[int]], piece: str) -> Dict[str, Any]:
-    candidates = get_candidate_moves(board, piece)
+def get_ai_decision(board: List[List[int]], piece: str, next_piece: str = None) -> Dict[str, Any]:
+    candidates = get_candidate_moves(board, piece, next_piece)
     if not candidates:
         return {"error": "Game Over"}
 
     criteria = {c["key"]: c["description"] for c in candidates}
+    is_emergency = candidates[0].get("is_emergency", False)
+    mode_str = "[🚨 EMERGENCY SURVIVAL: Clear lines immediately to reduce tower height!]" if is_emergency else "[STRATEGIC: Maintain 0 holes and clean surface]"
+    
     state = (
-        f"Tetris Placement Decision:\n"
-        f"Current Piece: {piece}-tetromino.\n"
-        f"Candidate Moves:\n" + "\n".join(f"- {k}: {v}" for k, v in criteria.items())
+        f"Tetris Placement Decision {mode_str}:\n"
+        f"Current Piece: {piece}-tetromino | Next Preview: {next_piece or 'Unknown'}.\n"
+        f"Candidate Moves (evaluated with 2-ply lookahead & institutional Dellacherie):\n" + "\n".join(f"- {k}: {v}" for k, v in criteria.items())
     )
 
     t0 = time.perf_counter()
@@ -94,7 +97,7 @@ def get_ai_decision(board: List[List[int]], piece: str) -> Dict[str, Any]:
             state=state,
             questions={
                 "best_move": Choice(
-                    instructions="Which candidate placement is the best strategic move to clear lines, avoid creating holes, and keep the board height low?",
+                    instructions="Which candidate placement is the best strategic move to survive, clear lines, avoid creating holes, and keep height low?",
                     criteria=criteria
                 )
             },
@@ -149,7 +152,7 @@ def run_terminal_game(max_pieces: int = 5, delay: float = 0.5):
 
     while piece_count < max_pieces:
         piece_count += 1
-        ai_res = get_ai_decision(board, current_piece)
+        ai_res = get_ai_decision(board, current_piece, upcoming_piece)
         if "error" in ai_res and ai_res["error"] == "Game Over":
             print("\n💥 GAME OVER! No valid placements remaining.")
             break
@@ -196,19 +199,8 @@ def run_terminal_game(max_pieces: int = 5, delay: float = 0.5):
         # Place piece permanently on board
         shape = PIECES[chosen["piece"]][chosen["rotation"]]
         piece_idx = PIECE_NAMES.index(chosen["piece"]) + 1
-        new_board, cleared = simulate_placement(board, shape, chosen["col"], chosen["landing_r"])
-        
-        for dr in range(len(shape)):
-            for dc in range(len(shape[0])):
-                if shape[dr][dc]:
-                    board[chosen["landing_r"] + dr][chosen["col"] + dc] = piece_idx
-
-        # Clear lines
-        kept_rows = [row for row in board if not all(cell != 0 for cell in row)]
-        cleared_lines = ROWS - len(kept_rows)
-        while len(kept_rows) < ROWS:
-            kept_rows.insert(0, [0] * COLS)
-        board = kept_rows
+        new_board, cleared_lines, _ = simulate_placement(board, shape, chosen["col"], chosen["landing_r"])
+        board = new_board
 
         if cleared_lines > 0:
             total_lines += cleared_lines

@@ -728,6 +728,7 @@ HTML_CONTENT = """<!DOCTYPE html>
                 body: JSON.stringify({
                     board: board,
                     piece: activePiece.piece,
+                    next_piece: nextPiece,
                     backend: activeBackend
                 })
             });
@@ -996,9 +997,10 @@ class TetrisHandler(BaseHTTPRequestHandler):
 
                 board = req_data.get("board", [])
                 piece = req_data.get("piece", "I")
+                next_piece = req_data.get("next_piece")
                 backend = req_data.get("backend", "official")
 
-                candidates = get_candidate_moves(board, piece)
+                candidates = get_candidate_moves(board, piece, next_piece)
                 if not candidates:
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
@@ -1007,10 +1009,13 @@ class TetrisHandler(BaseHTTPRequestHandler):
                     return
 
                 criteria = {c["key"]: c["description"] for c in candidates}
+                is_emergency = candidates[0].get("is_emergency", False)
+                mode_str = "[🚨 EMERGENCY SURVIVAL: Clear lines immediately to reduce tower height!]" if is_emergency else "[STRATEGIC: Maintain 0 holes, flat surface]"
+
                 state = (
-                    f"Tetris Placement Decision:\n"
-                    f"Current Falling Piece: {piece}-tetromino.\n"
-                    f"Candidate Placements:\n" + "\n".join(f"- {k}: {v}" for k, v in criteria.items())
+                    f"Tetris Strategic Decision {mode_str}:\n"
+                    f"Current Falling Piece: {piece}-tetromino | Next Preview: {next_piece or 'Unknown'}.\n"
+                    f"Candidate Placements (evaluated with 2-ply lookahead & institutional Dellacherie):\n" + "\n".join(f"- {k}: {v}" for k, v in criteria.items())
                 )
 
                 t0 = time.perf_counter()
@@ -1025,7 +1030,7 @@ class TetrisHandler(BaseHTTPRequestHandler):
                     state=state,
                     questions={
                         "best_move": Choice(
-                            instructions="Which candidate placement is the best strategic move to clear lines, avoid creating holes, and keep the board height low?",
+                            instructions="Which candidate placement is the best strategic move to survive, clear lines, avoid creating holes, and keep height low?",
                             criteria=criteria
                         )
                     },
