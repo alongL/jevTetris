@@ -8,7 +8,8 @@
 
 ## 📸 界面预览
 
-![Tetris AI Preview](jev_official_running.png)
+![Tetris AI Preview](tetris_demo.gif)
+
 
 * **街机级 Web 界面**：顶部生成方块（Row 0），自适应对齐角度，底部半透明幽灵预瞄（Ghost），平滑匀速下落触底。
 * **实时候选决策分布条**：动态展示 TypeSafe System One 对各个落点候选（列号、旋转、空洞数、消除行数）的概率置信度。

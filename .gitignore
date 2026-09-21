@@ -9,7 +9,10 @@ __pycache__/
 *.py[cod]
 *.venv/
 
-# Screenshots
+# Media
 *.png
 !jev_official_running.png
+!tetris_demo.gif
+!tetris_demo.mp4
+
 
